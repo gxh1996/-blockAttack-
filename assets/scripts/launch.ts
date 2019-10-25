@@ -13,27 +13,26 @@ export default class Launch extends cc.Component {
      */
     private userBlockList: UserBlock[] = [];
 
-    onLoad() {
-    }
-
     start() {
-        // this.node.active = false;
         let self = this;
+
+        wx.removeUserCloudStorage({
+            keyList: ["score", "scoreSum"],
+            success: () => {
+                console.log("删除用户托管数据！");
+            }
+        })
 
         //接收主域发来的消息 data:{type,value}
         wx.onMessage(data => {
             console.log("收到主域发来的消息:", data);
 
             switch (data.type) {
-                case 'login': {//登录成功
-                    this.init();
-                    break;
-                }
                 case 'score': { //上传分数
                     self.updateScore(data.value);
                     break;
                 }
-                case "friend": {
+                case "friend": { //刷新排行榜
                     self.updateRankingList();
                     break;
                 }
@@ -42,37 +41,33 @@ export default class Launch extends cc.Component {
     }
 
     /**
-     * 开发数据域的初始化
-     */
-    private init() {
-        this.updateRankingList();
-    }
-
-    /**
      * 更新成绩，保存最高分
-     * @param newScore 
+     * @param newScore {level,value}
      */
-    private updateScore(newScore: number) {
+    private updateScore(newScore: any) {
         let self = this;
 
         wx.getUserCloudStorage({
-            keyList: ["score"],
+            keyList: ["score", "scoreSum"],
             success: (data) => {
-                let curScore: number = 0;
+                console.log("得到的用户云数据：", data);
+
+                let scores: number[]; //下标+1为关卡数
                 if (data.KVDataList.length > 0) {
-                    for (let i = 0; i < data.KVDataList.length; i++) {
-                        if (data.KVDataList[i].key === "score") {
-                            curScore = data.KVDataList[i].value;
-                            break;
-                        }
-                    }
-                    if (curScore < newScore)
-                        self.setUserCloudStorage("score", newScore.toString());
-                    else
-                        return;
+                    scores = JSON.parse(data.KVDataList[0].value);//[value...]
                 }
-                else //当前该用户还没有托管数据
-                    self.setUserCloudStorage("score", newScore.toString());
+                else {//当前该用户还没有托管数据
+                    scores = [];
+                }
+                scores[newScore.level - 1] = newScore.value;
+                self.setUserCloudStorage("score", JSON.stringify(scores));
+
+                //统计总分
+                let sum = 0;
+                for (let i = 0; i < scores.length; i++)
+                    sum += scores[i];
+                console.log("总分：", sum);
+                self.setUserCloudStorage("scoreSum", JSON.stringify(sum));
             },
             fail: () => {
                 console.error("对用户托管数据进行读操作失败!");
@@ -89,7 +84,7 @@ export default class Launch extends cc.Component {
 
 
         wx.getFriendCloudStorage({
-            keyList: ["score"],
+            keyList: ["scoreSum"],
             success: (data) => {
                 console.log("好友托管数据：", data); //至少有一个自己
                 let list: any[] = self.getUGDOfTop(data.data, 9);
@@ -117,7 +112,7 @@ export default class Launch extends cc.Component {
                 }
                 //写入用户数据
                 for (let i = 0; i < list.length; i++) {
-                    let score: string = this.getValueFromKVDataList(list[i].KVDataList, "score");
+                    let score: string = this.getValueFromKVDataList(list[i].KVDataList, "scoreSum");
                     self.userBlockList[i].init(i + 1, score, list[i]);
                 }
 
@@ -136,13 +131,12 @@ export default class Launch extends cc.Component {
      * @param n 返回靠前的几个数据
      * @returns UserGameData[]
      */
-    private getUGDOfTop(userGameData: any[], n: number): any[] {
+    private getUGDOfTop(userGameDatas: any[], n: number): any[] {
         let self = this;
-        console.log("从userGameData[]中获取分数靠前的用户信息", userGameData);
 
-        if (userGameData.length === 1) { //只有自己一个玩家
-            if (this.hasKeyInKVDataList(userGameData[0].KVDataList, "score"))
-                return userGameData;
+        if (userGameDatas.length === 1) { //只有自己一个玩家
+            if (this.hasKeyInKVDataList(userGameDatas[0].KVDataList, "scoreSum"))
+                return userGameDatas;
             else
                 return [];
         }
@@ -150,10 +144,10 @@ export default class Launch extends cc.Component {
         console.log("开始排序...");
 
         //倒序排序
-        userGameData.sort(function (a, b): number {
+        userGameDatas.sort(function (a, b): number {
             //这里要默认第一个元素为分数
-            let v1: number = Number(self.getValueFromKVDataList(a.KVDataList, "score"));
-            let v2: number = Number(self.getValueFromKVDataList(b.KVDataList, "score"));
+            let v1: number = Number(self.getValueFromKVDataList(a.KVDataList, "scoreSum"));
+            let v2: number = Number(self.getValueFromKVDataList(b.KVDataList, "scoreSum"));
             if (v1 === v2)
                 return 0;
             else if (v1 < v2)
@@ -161,7 +155,7 @@ export default class Launch extends cc.Component {
             else
                 return 1;
         });
-        let list = userGameData.slice(0, n - 1);
+        let list = userGameDatas.slice(0, n - 1);
         return list;
     }
     /**
@@ -188,16 +182,18 @@ export default class Launch extends cc.Component {
      */
     private hasKeyInKVDataList(KVDataList: any[], key: string): boolean {
         let ret: boolean = false;
-        let e;
-        for (e of KVDataList)
-            if (e.key === key) {
-                ret = true;
-                break;
-            }
 
-        if (e.value === null)
-            ret = false;
+        if (KVDataList.length > 0) {
+            let e;
+            for (e of KVDataList)
+                if (e.key === key) {
+                    ret = true;
+                    break;
+                }
 
+            if (e.value === null)
+                ret = false;
+        }
         return ret;
     }
 
@@ -222,6 +218,5 @@ export default class Launch extends cc.Component {
             }
         })
     }
-
 
 }
