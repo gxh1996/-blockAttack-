@@ -42,32 +42,29 @@ export default class Launch extends cc.Component {
 
     /**
      * 更新成绩，保存最高分
-     * @param newScore {level,value}
+     * @param newScore 
      */
     private updateScore(newScore: any) {
         let self = this;
 
         wx.getUserCloudStorage({
-            keyList: ["score", "scoreSum"],
+            keyList: ["score"],
             success: (data) => {
                 console.log("得到的用户云数据：", data);
 
-                let scores: number[]; //下标+1为关卡数
+                let oldScore: number;
                 if (data.KVDataList.length > 0) {
-                    scores = JSON.parse(data.KVDataList[0].value);//[value...]
+                    oldScore = JSON.parse(data.KVDataList[0].value);//[value...]
                 }
                 else {//当前该用户还没有托管数据
-                    scores = [];
+                    oldScore = 0;
                 }
-                scores[newScore.level - 1] = newScore.value;
-                self.setUserCloudStorage("score", JSON.stringify(scores));
 
-                //统计总分
-                let sum = 0;
-                for (let i = 0; i < scores.length; i++)
-                    sum += scores[i];
-                console.log("总分：", sum);
-                self.setUserCloudStorage("scoreSum", JSON.stringify(sum));
+                //存储更高的分数
+                if (newScore > oldScore) {
+                    self.setUserCloudStorage("score", JSON.stringify(newScore));
+                    console.log("保存数据：", newScore);
+                }
             },
             fail: () => {
                 console.error("对用户托管数据进行读操作失败!");
@@ -84,7 +81,7 @@ export default class Launch extends cc.Component {
 
 
         wx.getFriendCloudStorage({
-            keyList: ["scoreSum"],
+            keyList: ["score"],
             success: (data) => {
                 console.log("好友托管数据：", data); //至少有一个自己
                 let list: any[] = self.getUGDOfTop(data.data, 9);
@@ -112,7 +109,7 @@ export default class Launch extends cc.Component {
                 }
                 //写入用户数据
                 for (let i = 0; i < list.length; i++) {
-                    let score: string = this.getValueFromKVDataList(list[i].KVDataList, "scoreSum");
+                    let score: string = this.getValueFromKVDataList(list[i].KVDataList, "score");
                     self.userBlockList[i].init(i + 1, score, list[i]);
                 }
 
@@ -135,7 +132,7 @@ export default class Launch extends cc.Component {
         let self = this;
 
         if (userGameDatas.length === 1) { //只有自己一个玩家
-            if (this.hasKeyInKVDataList(userGameDatas[0].KVDataList, "scoreSum"))
+            if (this.hasKeyInKVDataList(userGameDatas[0].KVDataList, "score"))
                 return userGameDatas;
             else
                 return [];
@@ -146,8 +143,8 @@ export default class Launch extends cc.Component {
         //倒序排序
         userGameDatas.sort(function (a, b): number {
             //这里要默认第一个元素为分数
-            let v1: number = Number(self.getValueFromKVDataList(a.KVDataList, "scoreSum"));
-            let v2: number = Number(self.getValueFromKVDataList(b.KVDataList, "scoreSum"));
+            let v1: number = Number(self.getValueFromKVDataList(a.KVDataList, "score"));
+            let v2: number = Number(self.getValueFromKVDataList(b.KVDataList, "score"));
             if (v1 === v2)
                 return 0;
             else if (v1 < v2)
