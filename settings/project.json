@@ -8,17 +8,31 @@
   "design-resolution-height": 640,
   "design-resolution-width": 960,
   "excluded-modules": [
+    "Renderer Texture",
+    "Dynamic Atlas",
+    "ParticleSystem",
+    "TiledMap",
+    "Spine Skeleton",
+    "DragonBones",
+    "RichText",
+    "MotionStreak",
+    "Button",
+    "ProgressBar",
+    "ScrollBar",
+    "ScrollView",
+    "Toggle",
+    "PageView",
+    "EditBox",
+    "VideoPlayer",
+    "WebView",
+    "AudioSource",
+    "Animation",
+    "Collider",
+    "Action",
+    "Physics",
+    "NodePool",
     "3D",
     "3D Primitive",
-    "DragonBones",
-    "Dynamic Atlas",
-    "EditBox",
-    "MotionStreak",
-    "ParticleSystem",
-    "Renderer Texture",
-    "RichText",
-    "Spine Skeleton",
-    "TiledMap",
     "TypeScript Polyfill"
   ],
   "facebook": {
@@ -36,13 +50,12 @@
   "group-list": [
     "default"
   ],
-  "last-module-event-record-time": 1571918591578,
+  "last-module-event-record-time": 1573268366081,
   "simulator-orientation": false,
   "simulator-resolution": {
     "height": 640,
     "width": 960
   },
-  "start-scene": "current",
   "use-customize-simulator": true,
   "use-project-simulator-setting": false
 }

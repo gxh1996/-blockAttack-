@@ -16,12 +16,12 @@ export default class Launch extends cc.Component {
     start() {
         let self = this;
 
-        wx.removeUserCloudStorage({
-            keyList: ["score", "scoreSum"],
-            success: () => {
-                console.log("删除用户托管数据！");
-            }
-        })
+        // wx.removeUserCloudStorage({
+        //     keyList: ["score", "scoreSum"],
+        //     success: () => {
+        //         console.log("删除用户托管数据！");
+        //     }
+        // })
 
         //接收主域发来的消息 data:{type,value}
         wx.onMessage(data => {
